@@ -1,14 +1,12 @@
-# Refund Process
+# Payment Process
 
-**Project:** BusZ - Intercity Bus Ticket Booking Platform
+Project: BusZ - Intercity Bus Ticket Booking Platform
 
 Version: 1.0
 
-Document Type: Business Process
+Module: Payment
 
-Module: Refund
-
-Priority: High
+Priority: Critical
 
 Status: Draft
 
@@ -16,35 +14,29 @@ Status: Draft
 
 # 1. Purpose
 
-Tài liệu này mô tả toàn bộ quy trình hoàn tiền (Refund Process) của hệ thống BusZ.
+Tài liệu này mô tả toàn bộ quy trình thanh toán của hệ thống BusZ.
 
-Refund Process đảm bảo:
+Đây là module chịu trách nhiệm:
 
-- Hoàn tiền chính xác.
-- Không hoàn tiền trùng.
-- Theo đúng chính sách nhà xe.
-- Đồng bộ giữa Booking, Payment và Ticket.
-- Có khả năng kiểm tra và truy vết.
-
-Đây là tài liệu nền tảng để thiết kế:
-
-- Refund Module
-- Payment Module
-- Notification Module
-- Database
-- Admin Website
+- Thanh toán đơn đặt vé
+- Xác nhận giao dịch
+- Đồng bộ Booking
+- Sinh Ticket
+- Gửi Notification
+- Lưu Transaction
+- Hỗ trợ Refund
 
 ---
 
 # 2. Business Goal
 
-Mục tiêu của Refund Process:
+Đảm bảo quá trình thanh toán:
 
-- Xử lý hoàn tiền tự động.
-- Hạn chế thao tác thủ công.
-- Giảm tranh chấp.
-- Tăng sự minh bạch.
-- Đảm bảo tính toàn vẹn dữ liệu.
+- Chính xác
+- An toàn
+- Không thanh toán trùng
+- Không sinh Ticket sai
+- Không mất dữ liệu
 
 ---
 
@@ -56,153 +48,212 @@ Customer
 
 Secondary
 
+Backend
+
 Payment Gateway
 
-BusZ Backend
+Notification Service
+
+Ticket Service
 
 Admin
 
 Bus Company
 
-Notification Service
+---
+
+# 4. Supported Payment Methods
+
+Version 1
+
+- VNPay
+- MoMo
+- ZaloPay
+
+Future
+
+- Visa
+- Mastercard
+- Apple Pay
+- Google Pay
+- Stripe
+- PayPal
 
 ---
 
-# 4. Refund Conditions
+# 5. Preconditions
 
-Refund chỉ được tạo khi:
+Booking tồn tại.
 
-✓ Booking đã thanh toán.
+Booking Status = PENDING
 
-✓ Booking đã bị hủy.
+Ghế đang HOLD.
 
-✓ Booking đủ điều kiện hoàn tiền.
+Payment Gateway hoạt động.
 
-✓ Không tồn tại Refund khác.
+JWT hợp lệ.
 
 ---
 
-# 5. Refund Flow
+# 6. Payment Flow
 
 ```mermaid
 flowchart TD
 
-A[Customer Cancel Booking]
+A[Booking Summary]
 
 -->
 
-B[Validate Booking]
+B[Select Payment Method]
 
 -->
 
-C[Calculate Refund]
+C[Create Payment]
 
 -->
 
-D{Refund > 0}
-
-D -->|No| E[Finish]
-
-D -->|Yes| F[Create Refund]
+D[Redirect Gateway]
 
 -->
 
-G[Payment Gateway]
+E[Customer Pay]
 
 -->
 
-H{Success}
+F[Gateway Callback]
 
-H -->|Yes| I[Refund Success]
+-->
 
-H -->|No| J[Refund Failed]
+G{Success}
 
-I --> K[Notification]
+G -->|YES| H[Update Payment]
 
-J --> L[Retry]
+H --> I[Confirm Booking]
 
-L --> G
+I --> J[Generate Ticket]
+
+J --> K[Generate QR]
+
+K --> L[Notification]
+
+L --> M[Finish]
+
+G -->|NO| N[Payment Failed]
+
+N --> O[Booking Pending]
+
+O --> P[Retry Payment]
 ```
 
 ---
 
-# 6. Detailed Process
+# 7. Detailed Process
 
 ## Step 1
 
-Customer yêu cầu hủy vé.
+Customer nhấn
+
+Pay Now
 
 ---
 
 ## Step 2
 
-Backend kiểm tra:
+Backend
 
-Booking Status
+↓
+
+Create Payment
+
+↓
 
 Payment Status
-
-Cancellation Policy
-
-Refund Policy
-
----
-
-## Step 3
-
-Tính số tiền hoàn.
-
-Refund Amount
-
-=
-
-Paid Amount
-
--
-
-Cancellation Fee
-
----
-
-## Step 4
-
-Tạo Refund Request.
-
-Status
 
 PENDING
 
 ---
 
+## Step 3
+
+Backend
+
+↓
+
+Generate Payment URL
+
+↓
+
+Return URL
+
+---
+
+## Step 4
+
+Flutter
+
+↓
+
+Open Payment Gateway
+
+---
+
 ## Step 5
 
-Gửi yêu cầu sang Payment Gateway.
+Customer xác nhận thanh toán.
 
 ---
 
 ## Step 6
 
-Gateway trả kết quả.
-
-SUCCESS
-
-FAILED
-
-PROCESSING
+Gateway xử lý.
 
 ---
 
 ## Step 7
 
-Nếu SUCCESS
+Gateway Callback.
+
+↓
+
+Backend Verify Signature.
+
+---
+
+## Step 8
+
+Nếu Signature hợp lệ.
+
+↓
+
+Update Payment.
+
+---
+
+## Step 9
+
+Payment
+
+SUCCESS
 
 ↓
 
 Booking
 
+CONFIRMED
+
 ↓
 
-REFUNDED
+Seat
+
+BOOKED
+
+↓
+
+Generate Ticket
+
+↓
+
+Generate QR
 
 ↓
 
@@ -210,21 +261,29 @@ Notification
 
 ---
 
-## Step 8
+## Step 10
 
-Nếu FAILED
+Nếu FAIL.
+
+↓
+
+Payment
+
+FAILED
+
+↓
+
+Booking
+
+PENDING
 
 ↓
 
 Retry
 
-↓
-
-Admin Review
-
 ---
 
-# 7. Refund State
+# 8. Payment State
 
 ```mermaid
 stateDiagram-v2
@@ -258,103 +317,47 @@ RETRY
 -->
 
 SUCCESS
+
+FAILED
+
+-->
+
+CANCELLED
 ```
 
 ---
 
-# 8. Refund Policy
-
-## Policy 1
-
-> 48 giờ
-
-Refund
-
-100%
-
----
-
-## Policy 2
-
-24 - 48 giờ
-
-Refund
-
-80%
-
----
-
-## Policy 3
-
-6 - 24 giờ
-
-Refund
-
-50%
-
----
-
-## Policy 4
-
-< 6 giờ
-
-Refund
-
-0%
-
----
-
-# 9. Refund Formula
-
-Refund Amount
-
-=
-
-Paid Amount
-
--
-
-Cancellation Fee
-
----
-
-Ví dụ
-
-Paid
-
-500.000
-
-Fee
-
-100.000
-
-Refund
-
-400.000
-
----
-
-# 10. Refund Status
+# 9. Booking State
 
 PENDING
 
-PROCESSING
+↓
 
-SUCCESS
+CONFIRMED
 
-FAILED
+↓
 
-CANCELLED
-
-EXPIRED
+COMPLETED
 
 ---
 
-# 11. Database Tables
+Nếu Payment FAIL
 
-refunds
+↓
 
-refund_items
+PENDING
+
+---
+
+Nếu Timeout
+
+↓
+
+CANCELLED
+
+---
+
+# 10. Database Tables
 
 payments
 
@@ -362,101 +365,163 @@ payment_transactions
 
 bookings
 
-tickets
+booking_items
 
-activity_logs
+tickets
 
 notifications
 
+activity_logs
+
+refunds
+
 ---
 
-# 12. Database Changes
-
-Booking
-
-↓
-
-REFUNDED
+# 11. Database Updates
 
 Payment
 
-↓
+SUCCESS
 
-REFUND_SUCCESS
+Booking
 
-Ticket
-
-↓
-
-INVALID
+CONFIRMED
 
 Seat
 
+BOOKED
+
+Ticket
+
+ACTIVE
+
+Notification
+
+CREATED
+
+---
+
+# 12. API Flow
+
+POST
+
+/payments/create
+
 ↓
 
-AVAILABLE
+GET
+
+/payments/{id}
+
+↓
+
+POST
+
+/payments/callback
+
+↓
+
+POST
+
+/payments/verify
+
+↓
+
+GET
+
+/payments/history
 
 ---
 
-# 13. Payment Gateway
+# 13. Validation Rules
 
-Supported
-
-VNPay
-
-MoMo
-
-ZaloPay
-
-Future
-
-Stripe
-
-PayPal
-
-Apple Pay
-
-Google Pay
-
----
-
-# 14. Validation Rules
-
-Refund chỉ thực hiện một lần.
-
-Refund Amount
-
->= 0
-
-Refund Amount
-
-<= Paid Amount
-
-Booking phải thuộc User.
-
-Payment phải SUCCESS.
-
----
-
-# 15. Exception Cases
+Booking tồn tại.
 
 Booking chưa thanh toán.
 
-↓
+Booking thuộc User.
 
-Không Refund.
+Payment Amount > 0.
 
----
+Currency hợp lệ.
 
-Booking đã Refund.
-
-↓
-
-Không Refund.
+Signature hợp lệ.
 
 ---
 
-Gateway Timeout.
+# 14. Signature Verification
+
+Gateway
+
+↓
+
+Signature
+
+↓
+
+Backend Verify
+
+↓
+
+Accept
+
+hoặc
+
+Reject
+
+Không cập nhật Database nếu Signature không hợp lệ.
+
+---
+
+# 15. Idempotency
+
+Một Callback chỉ được xử lý một lần.
+
+Nếu Gateway gửi Callback nhiều lần.
+
+↓
+
+Backend bỏ qua.
+
+Không tạo Ticket lần hai.
+
+Không cập nhật Payment lần hai.
+
+---
+
+# 16. Timeout
+
+Gateway Timeout
+
+↓
+
+Retry
+
+---
+
+Customer đóng App
+
+↓
+
+Booking giữ nguyên.
+
+---
+
+Booking quá thời gian
+
+↓
+
+Auto Cancel.
+
+↓
+
+Release Seat.
+
+---
+
+# 17. Exception Cases
+
+Gateway Offline.
 
 ↓
 
@@ -464,177 +529,133 @@ Retry.
 
 ---
 
-Gateway Offline.
+Internet Lost.
 
 ↓
 
-Queue.
+Retry.
 
 ---
 
-# 16. Retry Strategy
+Booking Not Found.
+
+↓
+
+404.
+
+---
+
+Payment Expired.
+
+↓
+
+Cancel Booking.
+
+---
+
+# 18. Notification
+
+Payment Created.
+
+Payment Success.
+
+Payment Failed.
+
+Payment Expired.
+
+---
+
+# 19. Logging
+
+Create Payment
+
+Verify Signature
+
+Callback
+
+Generate Ticket
+
+Payment Success
+
+Payment Failed
 
 Retry
 
-1 phút
-
-↓
-
-5 phút
-
-↓
-
-30 phút
-
-↓
-
-2 giờ
-
-↓
-
-Manual Review
+Refund
 
 ---
 
-# 17. Notification
+# 20. Audit Trail
 
-Customer
+Payment ID
 
-Refund Created
+Gateway Transaction
 
-Refund Processing
+Amount
 
-Refund Success
+Method
 
-Refund Failed
+Created Time
 
----
+Updated Time
 
-Admin
+User
 
-Refund Failed
-
-Manual Review
+Booking
 
 ---
 
-Bus Company
+# 21. Security
 
-Booking Refunded
-
----
-
-# 18. Logging
-
-Refund Created
-
-Refund Updated
-
-Refund Success
-
-Refund Failed
-
-Gateway Callback
-
-Admin Action
-
----
-
-# 19. Audit Trail
-
-Lưu:
-
-Created By
-
-Approved By
-
-Gateway Transaction ID
-
-Refund Amount
-
-Refund Time
-
-Reason
-
----
-
-# 20. Security
-
-Refund API
-
-↓
+HTTPS
 
 JWT
 
-↓
-
-Permission
-
-↓
+Rate Limiting
 
 Transaction Lock
 
-↓
+Signature Verify
 
-Gateway
+Replay Protection
 
----
-
-# 21. Sequence Diagram
-
-```mermaid
-sequenceDiagram
-
-Customer->>Backend: Cancel Booking
-
-Backend->>Backend: Validate Booking
-
-Backend->>Backend: Calculate Refund
-
-Backend->>Gateway: Refund Request
-
-Gateway-->>Backend: Success
-
-Backend->>Database: Update Refund
-
-Backend->>Notification: Send Notification
-
-Notification-->>Customer: Refund Success
-```
+Input Validation
 
 ---
 
 # 22. Acceptance Criteria
 
-✓ Refund chỉ tạo một lần.
+✓ Không thanh toán trùng.
 
-✓ Không hoàn tiền vượt quá số tiền đã thanh toán.
+✓ Không tạo Ticket trùng.
 
-✓ Booking chuyển REFUNDED.
+✓ Signature hợp lệ.
 
-✓ Ticket vô hiệu.
+✓ Booking CONFIRMED.
 
-✓ Ghế được mở lại.
+✓ Seat BOOKED.
 
-✓ Notification được gửi.
+✓ Notification gửi thành công.
 
-✓ Activity Log được ghi.
+✓ Activity Log được tạo.
 
 ---
 
-# 23. Future Expansion
+# 23. Related Database
 
-Partial Refund
+payments
 
-Automatic Refund
+payment_transactions
 
-Insurance Refund
+bookings
 
-Voucher Refund
+booking_items
 
-Wallet Refund
+tickets
 
-Reward Point Refund
+refunds
+
+notifications
 
 ---
 
@@ -642,9 +663,7 @@ Reward Point Refund
 
 Booking Process
 
-Cancellation Process
-
-Payment Process
+Refund Process
 
 Business Rules
 
@@ -654,8 +673,36 @@ Database Design
 
 ---
 
-# 25. Summary
+# 25. Future Expansion
 
-Refund Process đảm bảo toàn bộ quá trình hoàn tiền trong BusZ được xử lý an toàn, minh bạch và nhất quán.
+Apple Pay
 
-Hệ thống phải đồng bộ trạng thái giữa Booking, Payment, Ticket, Seat và Notification để tránh mất dữ liệu hoặc hoàn tiền sai.
+Google Pay
+
+PayPal
+
+Stripe
+
+Split Payment
+
+Wallet
+
+Installment
+
+Crypto
+
+Reward Point Payment
+
+---
+
+# 26. Summary
+
+Payment Process là module quan trọng nhất sau Booking.
+
+Module này đảm bảo:
+
+- Thanh toán chính xác.
+- Đồng bộ dữ liệu.
+- Sinh vé điện tử.
+- Không xử lý giao dịch trùng.
+- Đảm bảo an toàn và khả năng mở rộng.
