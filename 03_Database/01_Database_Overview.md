@@ -16,355 +16,340 @@ Version: 1.0
 
 # 1. Purpose
 
-Tài liệu này mô tả tổng quan cơ sở dữ liệu của hệ thống BusZ.
+Database là nền tảng lưu trữ toàn bộ dữ liệu của hệ thống BusZ.
 
-Database là nền tảng lưu trữ toàn bộ dữ liệu của hệ thống:
-
-- User
-- Booking
-- Trip
-- Seat
-- Payment
-- Ticket
-- Notification
-- Review
-- Report
-- Admin
+Mọi nghiệp vụ trong hệ thống đều sử dụng Database làm nguồn dữ liệu chính.
 
 ---
 
-# 2. Database Technology
+# 2. Objectives
 
-Primary Database:
+Đảm bảo:
 
-PostgreSQL
+✓ Data Integrity
 
-ORM:
+✓ High Availability
 
-Prisma
+✓ Scalability
 
-Cache:
+✓ Performance
+
+✓ Security
+
+---
+
+# 3. Technology Stack
+
+Database
+
+PostgreSQL 17+
+
+ORM
+
+Prisma ORM
+
+Migration
+
+Prisma Migration
+
+Connection Pool
+
+PgBouncer
+
+Cache
 
 Redis
 
-Storage:
+Storage
 
 Supabase Storage
 
 ---
 
-# 3. Database Design Goals
+# 4. Database Architecture
 
-Database phải đảm bảo:
+Flutter App
 
-- Dữ liệu chính xác
-- Không trùng booking
-- Không trùng ghế
-- Không mất giao dịch
-- Dễ mở rộng
-- Dễ backup
-- Dễ migrate
+↓
+
+REST API
+
+↓
+
+Business Service
+
+↓
+
+Prisma ORM
+
+↓
+
+PostgreSQL
+
+↓
+
+Supabase Storage
 
 ---
 
-# 4. Main Database Domains
+# 5. Database Domains
 
-Database được chia thành các nhóm chính:
-
-```text
 Authentication
-User Profile
-Bus Company
-Route
+
+Profile
+
+Passenger
+
+Address
+
 Trip
+
+Bus
+
+Route
+
 Seat
+
 Booking
+
 Payment
+
 Ticket
+
 Promotion
+
 Notification
+
 Review
-Report
-Audit Log
-System Settings
-```
+
+Admin
+
+Audit
+
+System
 
 ---
 
-# 5. Core Tables
+# 6. Core Principles
 
-Các bảng cốt lõi:
+Normalized
 
-```text
+Consistent
+
+Scalable
+
+Secure
+
+Auditable
+
+---
+
+# 7. Naming Convention
+
+Tables
+
+snake_case
+
+Plural
+
+Examples
+
 users
-roles
-permissions
-user_roles
-
-bus_companies
-buses
-drivers
-routes
-locations
-stations
-
-trips
-trip_seats
-seat_layouts
 
 bookings
-booking_passengers
-booking_contacts
-booking_locations
 
-payments
 payment_transactions
-refunds
 
-tickets
 ticket_qr_codes
-ticket_checkins
-
-promotions
-vouchers
-
-notifications
-reviews
-audit_logs
-```
 
 ---
 
-# 6. High Level Relationship
+Columns
 
-```text
-User
- ↓
-Booking
- ↓
-Payment
- ↓
-Ticket
- ↓
-Check-in
-```
+snake_case
 
-```text
-Bus Company
- ↓
-Bus
- ↓
-Trip
- ↓
-Seat
- ↓
-Booking
-```
+Examples
+
+created_at
+
+updated_at
+
+deleted_at
+
+booking_status
 
 ---
 
-# 7. Database Principles
+# 8. Primary Key Strategy
 
-## 7.1 Use UUID
+UUID
 
-Tất cả bảng chính nên dùng UUID làm Primary Key.
+Ví dụ
 
-Ví dụ:
-
-```sql
 id UUID PRIMARY KEY
-```
+
+Không sử dụng Auto Increment cho các bảng chính.
 
 ---
 
-## 7.2 Soft Delete
+# 9. Timestamp Strategy
+
+Mỗi bảng nên có
+
+created_at
+
+updated_at
+
+deleted_at
+
+---
+
+# 10. Soft Delete
+
+Dùng deleted_at.
 
 Không xóa cứng dữ liệu quan trọng.
 
-Các bảng nên có:
+---
 
-```text
-deleted_at
-```
+# 11. Audit Strategy
+
+Ghi toàn bộ:
+
+Create
+
+Update
+
+Delete
+
+Login
+
+Payment
+
+Refund
+
+Admin Action
 
 ---
 
-## 7.3 Timestamp
+# 12. Transaction Strategy
 
-Mỗi bảng nên có:
+Các nghiệp vụ bắt buộc Transaction
 
-```text
-created_at
-updated_at
-deleted_at
-```
+Booking
 
----
+Payment
 
-## 7.4 Audit Log
+Ticket
 
-Các hành động quan trọng phải ghi log:
+Refund
 
-- Login
-- Booking
-- Payment
-- Refund
-- Ticket
-- Admin Action
+Seat Lock
+
+Seat Release
 
 ---
 
-# 8. Naming Convention
+# 13. Database Security
 
-Table name:
+TLS
 
-```text
-snake_case
-plural
-```
+JWT
 
-Ví dụ:
+Encrypted Backup
 
-```text
-users
-bookings
-payment_transactions
-ticket_qr_codes
-```
+Encrypted Storage
 
-Column name:
+Least Privilege
 
-```text
-snake_case
-```
-
-Ví dụ:
-
-```text
-full_name
-created_at
-booking_status
-```
+Audit Log
 
 ---
 
-# 9. Status Fields
+# 14. Backup Strategy
 
-Status nên dùng enum hoặc string có kiểm soát.
+Daily Backup
 
-Ví dụ Booking Status:
+Weekly Full Backup
 
-```text
-PENDING
-CONFIRMED
-PAID
-CANCELLED
-REFUNDED
-COMPLETED
-```
+Monthly Archive
 
-Payment Status:
-
-```text
-CREATED
-PENDING
-PROCESSING
-SUCCESS
-FAILED
-REFUNDED
-```
-
-Ticket Status:
-
-```text
-ACTIVE
-CHECKED_IN
-CANCELLED
-REFUNDED
-EXPIRED
-```
+Point-in-Time Recovery
 
 ---
 
-# 10. Index Strategy
+# 15. Performance Strategy
 
-Cần index cho:
+Indexes
 
-```text
-email
-phone
-booking_code
-ticket_number
-payment_transaction_id
-trip_id
-user_id
-created_at
-status
-```
+Connection Pool
+
+Caching
+
+Partition (Future)
+
+Read Replica (Future)
 
 ---
 
-# 11. Transaction Strategy
+# 16. Monitoring
 
-Các nghiệp vụ bắt buộc dùng database transaction:
+CPU
 
-- Create Booking
-- Hold Seat
-- Payment Success
-- Generate Ticket
-- Refund
-- Cancel Ticket
-- Check-in
+Memory
 
----
+Slow Query
 
-# 12. Data Integrity Rules
+Connections
 
-Không được:
+Replication
 
-- Một ghế bán cho hai người
-- Một payment tạo nhiều ticket trùng
-- Một booking thanh toán nhiều lần
-- Một QR check-in nhiều lần
-- Refund vượt quá số tiền đã thanh toán
+Storage
 
 ---
 
-# 13. Backup Strategy
+# 17. Database Standards
 
-Backup hằng ngày.
+Third Normal Form (3NF)
 
-Backup trước khi migration.
+Foreign Key Constraint
 
-Giữ bản backup tối thiểu 30 ngày.
+Unique Constraint
 
-Production backup nên lưu ở storage riêng.
+Check Constraint
 
----
-
-# 14. Migration Strategy
-
-Dùng Prisma Migration.
-
-Không sửa database thủ công trên production.
-
-Mỗi thay đổi schema phải có migration file.
+Index Optimization
 
 ---
 
-# 15. Related Documents
+# 18. Related Documents
 
-- 01_Business
-- 02_UI
-- 04_Backend
-- 05_API
-- 13_Security
-- 14_DevOps
+ERD
+
+Prisma Schema
+
+API
+
+Backend
+
+Architecture
 
 ---
 
-# 16. Summary
+# 19. Future Expansion
 
-Database Overview là tài liệu nền tảng cho toàn bộ thiết kế cơ sở dữ liệu BusZ.
+Multi-region Database
 
-Các tài liệu tiếp theo sẽ đi chi tiết vào ERD, bảng dữ liệu, quan hệ, index, constraint và Prisma Schema.
+Read Replica
+
+Database Sharding
+
+Data Warehouse
+
+Event Store
+
+---
+
+# 20. Summary
+
+Database Overview là tài liệu mô tả kiến trúc tổng quan của hệ thống cơ sở dữ liệu BusZ, định nghĩa các nguyên tắc thiết kế, chiến lược bảo mật, hiệu năng, sao lưu và khả năng mở rộng để làm nền tảng cho toàn bộ hệ thống.
